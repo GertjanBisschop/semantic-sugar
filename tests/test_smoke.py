@@ -54,15 +54,15 @@ class SmokeTest:
             "a@x.org",
             "b@x.org",
         ]
-        assert names["alice"].employer.name == "Acme" and names["alice"].age == 36
+        assert (
+            names["alice"].employer.name == "Acme" and names["alice"].age == 36
+        )
         assert sorted(names["alice"].colleagues) == ["Alice", "Bob"]
         bad = {str(e.node).rsplit("/", 1)[1] for e in res.errors}
         assert bad == {"bob", "eve"}  # underage; missing name
 
-
     def test_override_selector(g):
         assert len(Person.project(g, select=[EX.alice])) == 1
-
 
     def test_from_rows(g):
         rows = g.query("""PREFIX ex:<http://example.org/> PREFIX foaf:<http://xmlns.com/foaf/0.1/>
