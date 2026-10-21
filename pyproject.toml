@@ -1,0 +1,21 @@
+[project]
+name = "semantic-sugar"
+version = "0.1.0"
+description = "Project RDF graphs onto Pydantic models"
+readme = "README.md"
+authors = [
+    { name = "Gertjan Bisschop", email = "gertjanbisschop@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = ["rdflib>=7", "pydantic>=2.7", "typing_extensions"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["semantic_sugar*"]
