@@ -41,7 +41,7 @@ jobs:
       - name: build docs
         run: | 
           make docs
-          shell: bash
+        shell: bash
 
       - uses: actions/upload-pages-artifact@v5
         with:
