@@ -1,0 +1,51 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+
+@prefix ex: <https://example.com>.
+
+ex:emodnet-subset a dcat:Catalog ;
+    dct:title "EMODnet subset"@en ;
+    dct:description "Emodnetsubset for Mission XYZ."@en ;
+    dcat:dataset
+        ex:emodnet-bathymetry 
+    .
+
+ex:emodnet-bathymetry
+    a dcat:Dataset ;
+    dct:title
+        "Placeholder" ;    
+    dct:description
+        "Placeholder" ;
+    dcat:distribution
+        ex:emodnet-bathymetry-wfs ;
+	dcat:distribution
+        ex:emodnet-bathymetry-geojson ;
+    .
+
+ex:emodnet-bathymetry-wfs
+    a dcat:Distribution ;
+    dct:title
+        "Placeholder" ;
+    dct:description
+        "Placeholder" ;
+    dct:accessService
+        ex:emodnet-bathymetry-service 
+	.
+
+ex:emodnet-bathmetry-geojson a dcat:Distribution ;
+	dct:title "Placeholder" ;
+	dct:description "Local distribution" ;
+	dcat:mediaType <https://www.iana.org/assignments/media-types/application/geo+json> ;
+	dcat:downloadURL <file:///network/shares/data/dataset_2026.geojson>
+	.
+
+ex:emodnet-bathymetry-service
+
+    a dcat:DataService ;
+    dct:endpointURL
+        <https://ows.emodnet-bathymetry.eu/wfs> ;
+    dcat:endpointDescription
+        <https://ows.emodnet-bathymetry.eu/wfs?request=GetCapabilities> ;
+    dct:conformsTo
+        <https://www.ogc.org/standards/wfs/>
+    .

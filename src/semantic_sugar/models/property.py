@@ -1,4 +1,5 @@
 """Stage 2 - value derivation: Prop(), Id, Lang and expression evaluation."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,8 +11,8 @@ from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.paths import Path
 from rdflib.term import Node
 
-from .converters import default_converters
-from .selectors import Sparql
+from semantic_sugar.models.selectors import Sparql
+from semantic_sugar.from_rdf.converters import default_converters
 
 
 # --------------------------------------------------------------------------- Id
@@ -61,18 +62,28 @@ class Lang:
 # ------------------------------------------------------------------------- Prop
 @dataclass
 class PropSpec:
-    source: Any                       # URIRef | rdflib Path | Sparql | callable(graph, node)
+    source: Any  # URIRef | rdflib Path | Sparql | callable(graph, node)
     lang: Lang | None = None
     datatype: URIRef | None = None
-    order_by: Any = None              # predicate or path evaluated on each value
-    deref: bool = True                # False: keep nested nodes as raw URIRef/BNode
-    on_many: Lit["error", "first", "last"] = "error"   # scalar fields given several values
+    order_by: Any = None  # predicate or path evaluated on each value
+    deref: bool = True  # False: keep nested nodes as raw URIRef/BNode
+    on_many: Lit["error", "first", "last"] = (
+        "error"  # scalar fields given several values
+    )
 
 
-def Prop(source: Any, *, lang: str | Lang | None = None, datatype: URIRef | None = None,
-         order_by: Any = None, deref: bool = True, on_many: str = "error",
-         default: Any = PydanticUndefined, default_factory: Callable | None = None,
-         **field_kwargs: Any) -> Any:
+def Prop(
+    source: Any,
+    *,
+    lang: str | Lang | None = None,
+    datatype: URIRef | None = None,
+    order_by: Any = None,
+    deref: bool = True,
+    on_many: str = "error",
+    default: Any = PydanticUndefined,
+    default_factory: Callable | None = None,
+    **field_kwargs: Any,
+) -> Any:
     """Declare how a model field is derived from the graph.
 
     Returns a pydantic ``FieldInfo`` carrying a ``PropSpec`` in its metadata, so
@@ -95,7 +106,7 @@ def Prop(source: Any, *, lang: str | Lang | None = None, datatype: URIRef | None
 def _sorted(values: list[Any], key: Callable[[Any], Any]) -> list[Any]:
     try:
         return sorted(values, key=key)
-    except TypeError:                       # heterogeneous types: fall back to text
+    except TypeError:  # heterogeneous types: fall back to text
         return sorted(values, key=lambda v: str(key(v)))
 
 
@@ -108,7 +119,13 @@ def evaluate(spec: PropSpec, graph: Graph, node: Node) -> list[Node]:
         raw = src.values(graph, node)
     elif callable(src):
         out = src(graph, node)
-        raw = [] if out is None else [out] if isinstance(out, (Node, str, int, float, bool)) else out
+        raw = (
+            []
+            if out is None
+            else [out]
+            if isinstance(out, (Node, str, int, float, bool))
+            else out
+        )
     else:
         raise TypeError(f"Unsupported derivation expression: {src!r}")
 
@@ -116,12 +133,21 @@ def evaluate(spec: PropSpec, graph: Graph, node: Node) -> list[Node]:
     if spec.lang is not None:
         values = spec.lang.apply(values)
     if spec.datatype is not None:
-        values = [v for v in values if not isinstance(v, Literal) or v.datatype == spec.datatype]
+        values = [
+            v
+            for v in values
+            if not isinstance(v, Literal) or v.datatype == spec.datatype
+        ]
 
     if spec.order_by is not None:
+
         def key(v: Any) -> Any:
             first = next(iter(graph.objects(v, spec.order_by)), None)
-            return (first is None, default_converters.convert(first) if first is not None else 0)
+            return (
+                first is None,
+                default_converters.convert(first) if first is not None else 0,
+            )
+
         return _sorted(values, key)
     # RDF has no intrinsic ordering: sort for deterministic output
     return _sorted(values, lambda v: default_converters.convert(v))

@@ -1,0 +1,27 @@
+[project]
+site_name = "Semantic Sugar"
+site_description = "Project RDF graphs onto Pydantic models and back"
+site_url = "https://vlizbe.github.io/semantic-sugar/"
+nav = [
+    {"Home"="index.md"},
+    {"Quickstart"="quickstart.md"},
+    {"Details" = [
+        "details/fields",
+        "details/selectors",
+        "details/projection",
+        "details/serialization",
+        "details/errors",
+    ]},
+]
+
+[build]
+docs_dir = "docs"
+site_dir = "site"
+
+[theme]
+name = "material"
+font = false
+
+[extra]
+generator = true
+

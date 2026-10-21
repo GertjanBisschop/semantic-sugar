@@ -1,14 +1,31 @@
 """Tests for converting RDFModel instances back to RDF graphs."""
+
 from __future__ import annotations
 
 from typing import Any
 
 import pytest
-from rdflib import BNode, FOAF, Graph, Literal, Namespace, RDF, RDFS, URIRef, XSD
+from rdflib import (
+    BNode,
+    FOAF,
+    Graph,
+    Literal,
+    Namespace,
+    RDF,
+    RDFS,
+    URIRef,
+    XSD,
+)
 from rdflib.term import Node
 
 from semantic_sugar import (
-    Id, OfType, Prop, RDFModel, Sparql, to_rdf, to_rdf_many,
+    Id,
+    OfType,
+    Prop,
+    RDFModel,
+    Sparql,
+    to_rdf,
+    to_rdf_many,
 )
 
 EX = Namespace("http://example.org/")
@@ -16,6 +33,7 @@ SCHEMA = Namespace("http://schema.org/")
 
 
 # ==================================================================== Simple model
+
 
 class Person(RDFModel, select=OfType(FOAF.Person)):
     uri: Id
@@ -28,7 +46,9 @@ class TestSimpleModel:
     """Convert a simple model with scalar fields."""
 
     def test_basic_conversion(self):
-        person = Person(uri=EX.alice, name="Alice", email="alice@example.org", age=30)
+        person = Person(
+            uri=EX.alice, name="Alice", email="alice@example.org", age=30
+        )
         graph = person.to_rdf()
 
         assert (EX.alice, RDF.type, FOAF.Person) in graph
@@ -48,7 +68,9 @@ class TestSimpleModel:
 
     def test_to_rdf_function(self):
         """The standalone to_rdf function should work the same."""
-        person = Person(uri=EX.carol, name="Carol", email="carol@example.org", age=25)
+        person = Person(
+            uri=EX.carol, name="Carol", email="carol@example.org", age=25
+        )
         graph = to_rdf(person)
 
         assert (EX.carol, RDF.type, FOAF.Person) in graph
@@ -84,6 +106,7 @@ class TestSimpleModel:
 
 # ==================================================================== Many cardinality
 
+
 class Author(RDFModel, select=OfType(EX.Author)):
     uri: Id
     name: str = Prop(FOAF.name)
@@ -97,7 +120,7 @@ class TestManyCardinality:
         author = Author(
             uri=EX.writer1,
             name="Jane Doe",
-            interests=("RDF", "Python", "Semantic Web")
+            interests=("RDF", "Python", "Semantic Web"),
         )
         graph = author.to_rdf()
 
@@ -116,9 +139,7 @@ class TestManyCardinality:
             interests: list[str] = Prop(EX.interest)
 
         author = AuthorList(
-            uri=EX.writer2,
-            name="John Smith",
-            interests=["AI", "ML"]
+            uri=EX.writer2, name="John Smith", interests=["AI", "ML"]
         )
         graph = author.to_rdf()
 
@@ -127,6 +148,7 @@ class TestManyCardinality:
 
 
 # ==================================================================== Nested models
+
 
 class Address(RDFModel):
     uri: Id
@@ -154,8 +176,16 @@ class TestNestedModel:
         assert (EX.person1, FOAF.homepage, EX.addr1) in graph
 
         # Nested entity
-        assert (EX.addr1, SCHEMA.streetAddress, Literal("123 Main St")) in graph
-        assert (EX.addr1, SCHEMA.addressLocality, Literal("Springfield")) in graph
+        assert (
+            EX.addr1,
+            SCHEMA.streetAddress,
+            Literal("123 Main St"),
+        ) in graph
+        assert (
+            EX.addr1,
+            SCHEMA.addressLocality,
+            Literal("Springfield"),
+        ) in graph
 
     def test_many_nested(self):
         """Many nested models produce multiple triples."""
@@ -165,9 +195,19 @@ class TestNestedModel:
             name: str = Prop(FOAF.name)
             employees: tuple[Contact, ...] = Prop(EX.employee, deref=True)
 
-        emp1 = Contact(uri=EX.emp1, name="Alice", address=Address(uri=EX.a1, street="St1", city="City1"))
-        emp2 = Contact(uri=EX.emp2, name="Bob", address=Address(uri=EX.a2, street="St2", city="City2"))
-        company = Company(uri=EX.acme, name="Acme Corp", employees=(emp1, emp2))
+        emp1 = Contact(
+            uri=EX.emp1,
+            name="Alice",
+            address=Address(uri=EX.a1, street="St1", city="City1"),
+        )
+        emp2 = Contact(
+            uri=EX.emp2,
+            name="Bob",
+            address=Address(uri=EX.a2, street="St2", city="City2"),
+        )
+        company = Company(
+            uri=EX.acme, name="Acme Corp", employees=(emp1, emp2)
+        )
         graph = company.to_rdf()
 
         assert (EX.acme, RDF.type, EX.Company) in graph
@@ -184,6 +224,7 @@ class TestNestedModel:
 
 # ==================================================================== Sparql source fields (should be skipped)
 
+
 class Sensor(RDFModel, select=OfType(EX.Sensor)):
     uri: Id
     label: str = Prop(RDFS.label)
@@ -197,7 +238,9 @@ class TestSparqlSkipped:
     """Fields with SPARQL sources are skipped during conversion."""
 
     def test_sparql_field_skipped(self):
-        sensor = Sensor(uri=EX.s1, label="Temperature Sensor", readings=("22.5", "23.0"))
+        sensor = Sensor(
+            uri=EX.s1, label="Temperature Sensor", readings=("22.5", "23.0")
+        )
         graph = sensor.to_rdf()
 
         assert (EX.s1, RDF.type, EX.Sensor) in graph
@@ -209,10 +252,13 @@ class TestSparqlSkipped:
         predicates = set(sparql_triples)
         # No triples from the SPARQL field
         for triple in graph.triples((EX.s1, None, None)):
-            assert triple[1] in (RDF.type, RDFS.label), f"Unexpected predicate: {triple[1]}"
+            assert triple[1] in (RDF.type, RDFS.label), (
+                f"Unexpected predicate: {triple[1]}"
+            )
 
 
 # ==================================================================== Callable source fields (should be skipped)
+
 
 def _computed(graph: Graph, node: Node) -> str:
     return "computed"
@@ -235,10 +281,13 @@ class TestCallableSkipped:
         assert (EX.c1, FOAF.name, Literal("Test")) in graph
 
         for triple in graph.triples((EX.c1, None, None)):
-            assert triple[1] in (RDF.type, FOAF.name), f"Unexpected predicate: {triple[1]}"
+            assert triple[1] in (RDF.type, FOAF.name), (
+                f"Unexpected predicate: {triple[1]}"
+            )
 
 
 # ==================================================================== to_rdf_many
+
 
 class TestToRdfMany:
     """Convert multiple instances to a single graph."""
@@ -265,6 +314,7 @@ class TestToRdfMany:
 
 # ==================================================================== BNode subjects
 
+
 class TestBNodeSubject:
     """Models with BNode subjects."""
 
@@ -287,6 +337,7 @@ class TestBNodeSubject:
 
 
 # ==================================================================== Round-trip
+
 
 class TestRoundTrip:
     """Project from RDF, convert back, and verify the graph is equivalent."""
@@ -359,6 +410,7 @@ class TestRoundTrip:
 
 
 # ==================================================================== Edge cases
+
 
 class TestEdgeCases:
     """Edge cases and error handling."""

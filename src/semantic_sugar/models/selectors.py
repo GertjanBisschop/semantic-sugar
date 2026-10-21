@@ -1,4 +1,5 @@
 """Stage 1 - node selection."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -34,7 +35,11 @@ class OfType(Selector):
     def select(self, graph: Graph) -> Iterator[Node]:
         seen: set[Node] = set()
         for cls in self.classes:
-            targets = list(graph.transitive_subjects(RDFS.subClassOf, cls)) if self.infer else [cls]
+            targets = (
+                list(graph.transitive_subjects(RDFS.subClassOf, cls))
+                if self.infer
+                else [cls]
+            )
             for t in targets:
                 for s in graph.subjects(RDF.type, t):
                     if s not in seen:
@@ -51,9 +56,20 @@ class Sparql(Selector):
     Prefixes bound on the graph are available without declaration.
     """
 
-    def __init__(self, query: str, *, this: str = "this", value: str = "v",
-                 init_ns: dict[str, Any] | None = None):
-        self.query, self.this, self.value, self.init_ns = query, this, value, init_ns
+    def __init__(
+        self,
+        query: str,
+        *,
+        this: str = "this",
+        value: str = "v",
+        init_ns: dict[str, Any] | None = None,
+    ):
+        self.query, self.this, self.value, self.init_ns = (
+            query,
+            this,
+            value,
+            init_ns,
+        )
 
     def select(self, graph: Graph) -> Iterator[Node]:
         for row in graph.query(self.query, initNs=self.init_ns):
@@ -62,7 +78,9 @@ class Sparql(Selector):
                 yield node
 
     def values(self, graph: Graph, node: Node) -> Iterator[Node]:
-        for row in graph.query(self.query, initNs=self.init_ns, initBindings={self.this: node}):
+        for row in graph.query(
+            self.query, initNs=self.init_ns, initBindings={self.this: node}
+        ):
             v = row.asdict().get(self.value)
             if v is not None:
                 yield v

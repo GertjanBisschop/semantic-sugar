@@ -2,6 +2,7 @@
 
 Covers features not exercised by the basic smoke tests.
 """
+
 from __future__ import annotations
 
 import json
@@ -9,14 +10,30 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
-from pydantic import Field, ValidationError, field_validator
+from pydantic import field_validator
 from rdflib import BNode, FOAF, Graph, Literal, Namespace, RDF, RDFS, XSD
 from rdflib.term import Node
 
 from semantic_sugar import (
-    AllOf, AnyOf, CardinalityError, CycleError, FromCallable, Id, Lang,
-    Nodes, OfType, Prop, Projection, RDFModel, Selector, Sparql, Var,
-    ProjectionError, ProjectionResult, semanticError, default_converters,
+    AllOf,
+    AnyOf,
+    CardinalityError,
+    CycleError,
+    FromCallable,
+    Id,
+    Lang,
+    Nodes,
+    OfType,
+    Prop,
+    Projection,
+    RDFModel,
+    Selector,
+    Sparql,
+    Var,
+    ProjectionError,
+    ProjectionResult,
+    SemanticError,
+    default_converters,
 )
 
 EX = Namespace("http://example.org/")
@@ -24,6 +41,7 @@ DC = Namespace("http://purl.org/dc/elements/1.1/")
 
 
 # ==================================================================== fixtures
+
 
 @pytest.fixture
 def g():
@@ -95,6 +113,7 @@ def g():
 
 # ==================================================================== Selectors
 
+
 class TestSelectors:
     """Test all documented selector types and combinators."""
 
@@ -105,7 +124,9 @@ class TestSelectors:
         # alice, bob, ghost, bnode_person, cycA, cycB = 6 (carol is EX.Employee, not FOAF.Person)
         assert len(nodes) == 6
         assert EX.alice in nodes
-        assert EX.carol not in nodes  # carol is EX.Employee, not directly FOAF.Person
+        assert (
+            EX.carol not in nodes
+        )  # carol is EX.Employee, not directly FOAF.Person
 
     def test_of_type_infer(self, g):
         """OfType(infer=True) follows rdfs:subClassOf."""
@@ -113,7 +134,9 @@ class TestSelectors:
         nodes = list(sel.select(g))
         # Should include carol who is EX.Employee (subClassOf FOAF.Person)
         assert EX.carol in nodes
-        assert len(nodes) >= 6  # alice, bob, ghost, carol, bnode_person, + carol via infer
+        assert (
+            len(nodes) >= 6
+        )  # alice, bob, ghost, carol, bnode_person, + carol via infer
 
     def test_sparql_selector(self, g):
         """Sparql as a selector must bind ?this."""
@@ -121,7 +144,7 @@ class TestSelectors:
             "SELECT ?this WHERE { ?this a foaf:Person ; foaf:name ?n . FILTER(lang(?n)='en') }"
         )
         nodes = list(sel.select(g))
-        names = {str(n).rsplit("/", 1)[-1] for n in nodes if hasattr(n, 'n3')}
+        names = {str(n).rsplit("/", 1)[-1] for n in nodes if hasattr(n, "n3")}
         assert "alice" in names
         assert "bob" in names
         assert "ghost" not in names
@@ -135,20 +158,24 @@ class TestSelectors:
 
     def test_from_callable(self, g):
         """FromCallable wraps a callable that yields nodes."""
+
         def my_selector(graph):
             return [EX.alice, EX.bob]
+
         sel = FromCallable(my_selector)
         nodes = list(sel.select(g))
         assert len(nodes) == 2
 
     def test_bare_callable_selector(self, g):
         """A bare callable passed to select= is coerced to FromCallable."""
+
         class P(RDFModel):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
 
         def my_sel(graph):
             return [EX.alice]
+
         result = P.project(g, select=my_sel)
         assert len(result) == 1
         assert result[0].name == "Alice"
@@ -182,6 +209,7 @@ class TestSelectors:
 
     def test_selector_inheritance(self, g):
         """Subclass inherits parent's selector unless it sets its own."""
+
         class Person(RDFModel, select=OfType(FOAF.Person)):
             iri: Id
             name: str = Prop(FOAF.name)
@@ -198,6 +226,7 @@ class TestSelectors:
 
     def test_list_as_selector(self, g):
         """A plain list passed to select= is coerced to Nodes."""
+
         class P(RDFModel):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -208,11 +237,13 @@ class TestSelectors:
 
 # ==================================================================== Field derivation
 
+
 class TestFieldDerivation:
     """Test Prop options: lang, datatype, order_by, deref, on_many, callable source."""
 
     def test_lang_only(self, g):
         """Lang.only keeps only literals with the specified language."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             name: str = Prop(FOAF.name, lang=Lang.only("nl"))
@@ -223,6 +254,7 @@ class TestFieldDerivation:
 
     def test_lang_only_no_match(self, g):
         """Lang.only with no matching language yields empty."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             name: str | None = Prop(FOAF.name, lang=Lang.only("fr"))
@@ -232,6 +264,7 @@ class TestFieldDerivation:
 
     def test_lang_shorthand(self, g):
         """lang='en' shorthand means Lang.only('en')."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -241,6 +274,7 @@ class TestFieldDerivation:
 
     def test_datatype_filter(self, g):
         """Prop with datatype filter keeps only matching literals."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             scores: list[int] = Prop(EX.score, datatype=XSD.integer)
@@ -250,6 +284,7 @@ class TestFieldDerivation:
 
     def test_order_by(self, g):
         """Prop with order_by sorts values by the given predicate."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             friends: list[str] = Prop(EX.knows, order_by=EX.sortKey)
@@ -288,6 +323,7 @@ class TestFieldDerivation:
 
     def test_on_many_first(self, g):
         """on_many='first' picks the first value for a scalar field."""
+
         class P(RDFModel, select=Nodes(EX.bob)):
             iri: Id
             email: str = Prop(FOAF.mbox, on_many="first")
@@ -297,6 +333,7 @@ class TestFieldDerivation:
 
     def test_on_many_last(self, g):
         """on_many='last' picks the last value for a scalar field."""
+
         class P(RDFModel, select=Nodes(EX.bob)):
             iri: Id
             email: str = Prop(FOAF.mbox, on_many="last")
@@ -306,6 +343,7 @@ class TestFieldDerivation:
 
     def test_callable_source(self, g):
         """Prop with a callable source receives (graph, node)."""
+
         def get_name(graph, node):
             return Literal("Computed Name")
 
@@ -318,6 +356,7 @@ class TestFieldDerivation:
 
     def test_callable_source_returns_none(self, g):
         """Callable returning None yields no values."""
+
         def nothing(graph, node):
             return None
 
@@ -330,6 +369,7 @@ class TestFieldDerivation:
 
     def test_callable_source_returns_iterable(self, g):
         """Callable returning an iterable yields multiple values."""
+
         def multi(graph, node):
             return [Literal("a"), Literal("b")]
 
@@ -342,6 +382,7 @@ class TestFieldDerivation:
 
     def test_prop_with_pydantic_default(self, g):
         """Prop with default= passes through to Pydantic."""
+
         class P(RDFModel, select=Nodes(EX.ghost)):
             iri: Id
             name: str = Prop(FOAF.name, default="Unknown")
@@ -351,10 +392,14 @@ class TestFieldDerivation:
 
     def test_prop_with_alias(self, g):
         """Prop with alias= works as a Pydantic Field option for serialization."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             display_name: str = Prop(
-                FOAF.name, alias="displayName", validation_alias="display_name", lang="en"
+                FOAF.name,
+                alias="displayName",
+                validation_alias="display_name",
+                lang="en",
             )
 
         result = P.project(g)
@@ -366,10 +411,13 @@ class TestFieldDerivation:
 
     def test_sparql_derivation(self, g):
         """Sparql as a Prop source derives values via SPARQL."""
+
         class P(RDFModel, select=OfType(FOAF.Person)):
             iri: Id
             age: int = Prop(
-                Sparql("SELECT ?v WHERE { ?this ex:birthYear ?y . BIND(2026 - ?y AS ?v) }")
+                Sparql(
+                    "SELECT ?v WHERE { ?this ex:birthYear ?y . BIND(2026 - ?y AS ?v) }"
+                )
             )
 
         result = P.project(g)
@@ -379,6 +427,7 @@ class TestFieldDerivation:
 
     def test_path_expression(self, g):
         """Prop with rdflib path expression (sequence, inverse, alternative)."""
+
         # Alternative: FOAF.mbox | FOAF.homepage
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
@@ -389,6 +438,7 @@ class TestFieldDerivation:
 
     def test_inverse_path(self, g):
         """Prop with inverse path (~predicate)."""
+
         # ~EX.worksFor: who works for alice? (nobody, but test the mechanism)
         class P(RDFModel, select=Nodes(EX.acme)):
             iri: Id
@@ -400,11 +450,13 @@ class TestFieldDerivation:
 
 # ==================================================================== Projection
 
+
 class TestProjection:
     """Test graph-driven projection options."""
 
     def test_iter_project(self, g):
         """iter_project yields instances lazily."""
+
         class P(RDFModel, select=Nodes(EX.alice, EX.bob)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -414,6 +466,7 @@ class TestProjection:
 
     def test_project_one(self, g):
         """project_one projects a single node, ignoring selector."""
+
         class P(RDFModel, select=OfType(EX.Company)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -424,6 +477,7 @@ class TestProjection:
 
     def test_project_one_string_node(self, g):
         """project_one accepts a string node (converted to URIRef)."""
+
         class P(RDFModel, select=OfType(FOAF.Person)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -433,6 +487,7 @@ class TestProjection:
 
     def test_on_error_skip(self, g):
         """on_error='skip' skips failing nodes instead of raising."""
+
         class P(RDFModel, select=OfType(FOAF.Person)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")  # ghost has no name
@@ -444,6 +499,7 @@ class TestProjection:
 
     def test_max_depth(self, g):
         """max_depth limits nested projection depth."""
+
         class Company(RDFModel, select=OfType(EX.Company)):
             iri: Id
             name: str = Prop(EX.name)
@@ -463,6 +519,7 @@ class TestProjection:
 
     def test_identity_map_false(self, g):
         """identity_map=False creates separate objects for same node."""
+
         class Company(RDFModel, select=OfType(EX.Company)):
             iri: Id
             name: str = Prop(EX.name)
@@ -479,6 +536,7 @@ class TestProjection:
 
     def test_identity_map_true(self, g):
         """identity_map=True (default) shares objects for same node."""
+
         class Company(RDFModel, select=OfType(EX.Company)):
             iri: Id
             name: str = Prop(EX.name)
@@ -494,6 +552,7 @@ class TestProjection:
 
     def test_blank_node_id(self, g):
         """Id field works with blank nodes."""
+
         class P(RDFModel, select=OfType(FOAF.Person)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -506,6 +565,7 @@ class TestProjection:
 
     def test_required_field_missing(self, g):
         """Missing required field raises ProjectionError."""
+
         class P(RDFModel, select=Nodes(EX.ghost)):
             iri: Id
             name: str = Prop(FOAF.name)  # required, ghost has no name
@@ -515,6 +575,7 @@ class TestProjection:
 
     def test_optional_field_missing(self, g):
         """Missing optional field becomes None."""
+
         class P(RDFModel, select=Nodes(EX.ghost)):
             iri: Id
             name: str | None = Prop(FOAF.name)  # optional
@@ -524,6 +585,7 @@ class TestProjection:
 
     def test_list_field_empty(self, g):
         """Empty list field for required many becomes []."""
+
         class P(RDFModel, select=Nodes(EX.ghost)):
             iri: Id
             emails: list[str] = Prop(FOAF.mbox)  # many, ghost has none
@@ -533,6 +595,7 @@ class TestProjection:
 
 
 # ==================================================================== Query-driven projection
+
 
 class TestQueryDriven:
     """Test from_rows, Projection.by_bind, Projection.by_convention, and Projection.run."""
@@ -599,7 +662,7 @@ class TestQueryDriven:
                 "emails": "e",
                 "employer.iri": "c",
                 "employer.name": "cn",
-            }
+            },
         )
         assert len(people) >= 1
         alice = next((p for p in people if p.name == "Alice"), None)
@@ -607,6 +670,7 @@ class TestQueryDriven:
 
     def test_projection_object_run(self, g):
         """Projection object with run() executes query and projects (Level 3)."""
+
         class Company(RDFModel):
             iri: Id
             name: str = Prop(EX.name)
@@ -637,9 +701,9 @@ class TestQueryDriven:
                 "employer": Projection(
                     Company,
                     key=Var("c"),
-                    fields={"iri": Var("c"), "name": Var("cn")}
+                    fields={"iri": Var("c"), "name": Var("cn")},
                 ),
-            }
+            },
         )
         people = proj.run(g)
         assert len(people) >= 1
@@ -649,6 +713,7 @@ class TestQueryDriven:
 
     def test_projection_by_bind(self, g):
         """Projection.by_bind builds from explicit variable bindings."""
+
         class Company(RDFModel):
             iri: Id
             name: str = Prop(EX.name)
@@ -668,13 +733,14 @@ class TestQueryDriven:
                 "employer.iri": "c",
                 "employer.name": "cn",
             },
-            key="p"
+            key="p",
         )
         assert proj.model is Person
         assert isinstance(proj.fields["employer"], Projection)
 
     def test_projection_by_convention(self, g):
         """Projection.by_convention builds from variable names."""
+
         class Company(RDFModel):
             iri: Id
             name: str = Prop(EX.name)
@@ -685,7 +751,13 @@ class TestQueryDriven:
             emails: list[str] = Prop(FOAF.mbox)
             employer: Company | None = Prop(EX.worksFor)
 
-        variables = ["iri", "name", "emails", "employer__iri", "employer__name"]
+        variables = [
+            "iri",
+            "name",
+            "emails",
+            "employer__iri",
+            "employer__name",
+        ]
         proj = Projection.by_convention(Person, variables)
         assert proj.model is Person
 
@@ -753,11 +825,13 @@ class TestQueryDriven:
 
 # ==================================================================== Errors
 
+
 class TestErrors:
     """Test error types, messages, and behavior."""
 
     def test_cycle_error(self, g):
         """Cyclic graph raises CycleError."""
+
         class Person(RDFModel, select=Nodes(EX.cycA)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -770,6 +844,7 @@ class TestErrors:
 
     def test_cardinality_error(self, g):
         """Multiple values for scalar field raises CardinalityError."""
+
         class P(RDFModel, select=Nodes(EX.bob)):
             iri: Id
             email: str = Prop(FOAF.mbox)  # bob has 2 emails, scalar field
@@ -780,13 +855,16 @@ class TestErrors:
 
     def test_projection_error_path(self, g):
         """ProjectionError.path tracks the nesting path."""
+
         class Company(RDFModel, select=OfType(EX.Company)):
             iri: Id
             name: str = Prop(EX.name)
 
         class Person(RDFModel, select=Nodes(EX.alice)):
             iri: Id
-            employer: Company = Prop(EX.worksFor)  # required, but let's break Company
+            employer: Company = Prop(
+                EX.worksFor
+            )  # required, but let's break Company
 
         # Modify graph so Company has no name
         g2 = Graph()
@@ -803,13 +881,14 @@ class TestErrors:
         assert len(exc_info.value.path) >= 1
 
     def test_semantic_error_base_class(self):
-        """semanticError is the base class for all library errors."""
-        assert issubclass(ProjectionError, semanticError)
-        assert issubclass(CardinalityError, semanticError)
-        assert issubclass(CycleError, semanticError)
+        """SemanticError is the base class for all library errors."""
+        assert issubclass(ProjectionError, SemanticError)
+        assert issubclass(CardinalityError, SemanticError)
+        assert issubclass(CycleError, SemanticError)
 
     def test_projection_result(self, g):
         """try_project returns ProjectionResult with objects and errors."""
+
         class P(RDFModel, select=OfType(FOAF.Person)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -822,6 +901,7 @@ class TestErrors:
 
 
 # ==================================================================== Converters
+
 
 class TestConverters:
     """Test value conversion and custom converters."""
@@ -850,6 +930,7 @@ class TestConverters:
 
     def test_language_tagged_literal_to_str(self, g):
         """Language-tagged literals are converted to plain str."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")  # filter to single value
@@ -862,21 +943,28 @@ class TestConverters:
 
 # ==================================================================== RDFModel Pydantic compatibility
 
+
 class TestPydanticCompatibility:
     """Test that RDFModel works as a drop-in BaseModel."""
 
     def test_json_schema(self, g):
         """RDFModel produces valid JSON schema."""
+
         class P(RDFModel, select=OfType(FOAF.Person)):
             iri: Id
             name: str = Prop(FOAF.name)
 
         schema = P.model_json_schema()
-        assert "$defs" in schema or "definitions" in schema or "properties" in schema
+        assert (
+            "$defs" in schema
+            or "definitions" in schema
+            or "properties" in schema
+        )
         assert "name" in schema.get("properties", {})
 
     def test_model_dump(self, g):
         """RDFModel instances can be serialized with model_dump."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -888,6 +976,7 @@ class TestPydanticCompatibility:
 
     def test_model_dump_json(self, g):
         """RDFModel instances can be serialized to JSON."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -899,6 +988,7 @@ class TestPydanticCompatibility:
 
     def test_field_validator(self, g):
         """Pydantic field validators work on RDFModel."""
+
         class P(RDFModel, select=OfType(FOAF.Person)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -916,6 +1006,7 @@ class TestPydanticCompatibility:
 
     def test_forward_reference(self, g):
         """Forward references in type annotations work."""
+
         class Node(RDFModel):
             iri: Id
             label: str = Prop(DC.title)
@@ -926,10 +1017,14 @@ class TestPydanticCompatibility:
 
     def test_pydantic_alias(self, g):
         """Pydantic alias works with Prop for serialization output."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             display_name: str = Prop(
-                FOAF.name, alias="displayName", validation_alias="display_name", lang="en"
+                FOAF.name,
+                alias="displayName",
+                validation_alias="display_name",
+                lang="en",
             )
 
         result = P.project(g)
@@ -945,6 +1040,7 @@ class TestPydanticCompatibility:
 
     def test_default_factory(self, g):
         """Prop with default_factory works."""
+
         class P(RDFModel, select=Nodes(EX.ghost)):
             iri: Id
             tags: list[str] = Prop(FOAF.mbox, default_factory=list)
@@ -954,6 +1050,7 @@ class TestPydanticCompatibility:
 
     def test_set_type_annotation(self, g):
         """set[T] type annotation works like list[T]."""
+
         class P(RDFModel, select=Nodes(EX.alice)):
             iri: Id
             emails: set[str] = Prop(FOAF.mbox)
@@ -965,11 +1062,13 @@ class TestPydanticCompatibility:
 
 # ==================================================================== Model inheritance
 
+
 class TestModelInheritance:
     """Test RDFModel inheritance behavior."""
 
     def test_inherited_fields(self, g):
         """Subclass inherits parent's Prop fields via Python inheritance."""
+
         class BasePerson(RDFModel, select=OfType(FOAF.Person)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")
@@ -985,6 +1084,7 @@ class TestModelInheritance:
 
     def test_inherited_selector(self, g):
         """Subclass without select= inherits parent's selector."""
+
         class BasePerson(RDFModel, select=OfType(FOAF.Person)):
             iri: Id
             name: str = Prop(FOAF.name, lang="en")

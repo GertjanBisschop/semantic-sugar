@@ -7,31 +7,33 @@ using Prop(), Sparql derivations, and deref=True for nested models.
 The SOSA 2023 edition adds terms like sosa:System and sosa:hasSubSystem that are
 not in rdflib's built-in SOSA namespace, so they are defined as URIRef constants.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
-from rdflib import FOAF, Graph, Namespace, OWL, RDF, RDFS, URIRef
+from rdflib import FOAF, Graph, Namespace, OWL, RDFS, URIRef
 from rdflib import SOSA, SKOS  # built-in rdflib namespaces
 
 from semantic_sugar import Id, OfType, Prop, RDFModel, Sparql
 
 # --------------------------------------------------------------------------- namespaces
 
-EX     = Namespace("https://example.org/data/")
+EX = Namespace("https://example.org/data/")
 SENSOR = Namespace("https://example.org/sensor/")
-QK     = Namespace("http://qudt.org/vocab/quantitykind/")
-QUDT   = Namespace("http://qudt.org/schema/qudt/")
-UNIT   = Namespace("http://qudt.org/vocab/unit/")
+QK = Namespace("http://qudt.org/vocab/quantitykind/")
+QUDT = Namespace("http://qudt.org/schema/qudt/")
+UNIT = Namespace("http://qudt.org/vocab/unit/")
 
 # SOSA 2023 terms not in rdflib's built-in SOSA namespace
 SOSA_2023 = Namespace("http://www.w3.org/ns/sosa/")
-SOSA_System       = URIRef(str(SOSA_2023.System))
+SOSA_System = URIRef(str(SOSA_2023.System))
 SOSA_hasSubSystem = URIRef(str(SOSA_2023.hasSubSystem))
 
 
 # --------------------------------------------------------------------------- fixture
+
 
 @pytest.fixture
 def g() -> Graph:
@@ -44,12 +46,15 @@ def g() -> Graph:
 
 # --------------------------------------------------------------------------- models
 
+
 class ObservedPropertyContext(RDFModel):
     """A SOSA observable property with its quantity kind and unit."""
 
     uri: Id
     label: str | None = Prop(RDFS.label, on_many="first", default=None)
-    quantity_kind: str | None = Prop(SKOS.broader, on_many="first", default=None)
+    quantity_kind: str | None = Prop(
+        SKOS.broader, on_many="first", default=None
+    )
     unit: str | None = Prop(QUDT.hasUnit, on_many="first", default=None)
 
 
@@ -70,9 +75,9 @@ class SensorContext(RDFModel):
                 ] .
             }
             """,
-            init_ns={"sosa": SOSA, "owl": OWL, "rdfs": RDFS}
+            init_ns={"sosa": SOSA, "owl": OWL, "rdfs": RDFS},
         ),
-        deref=True
+        deref=True,
     )
 
 
@@ -81,10 +86,13 @@ class WeatherStation(RDFModel):
 
     uri: Id
     label: str | None = Prop(RDFS.label, on_many="first", default=None)
-    sub_systems: tuple[SensorContext, ...] = Prop(SOSA_hasSubSystem, deref=True)
+    sub_systems: tuple[SensorContext, ...] = Prop(
+        SOSA_hasSubSystem, deref=True
+    )
 
 
 # --------------------------------------------------------------------------- tests
+
 
 class TestObservedPropertyContext:
     """Project individual observed properties from the graph."""
@@ -108,7 +116,9 @@ class TestObservedPropertyContext:
         assert p.unit == str(UNIT.PA)
 
     def test_both_properties_together(self, g: Graph) -> None:
-        props = ObservedPropertyContext.project(g, select=[EX.Temperature, EX.Pressure])
+        props = ObservedPropertyContext.project(
+            g, select=[EX.Temperature, EX.Pressure]
+        )
         assert len(props) == 2
         uris = {p.uri for p in props}
         assert EX.Temperature in uris
@@ -137,7 +147,9 @@ class TestSensorContext:
         assert s.observed_properties[0].uri == EX.Pressure
 
     def test_both_sensors_together(self, g: Graph) -> None:
-        sensors = SensorContext.project(g, select=[EX.sens_temp, EX.sens_press])
+        sensors = SensorContext.project(
+            g, select=[EX.sens_temp, EX.sens_press]
+        )
         assert len(sensors) == 2
         uris = {s.uri for s in sensors}
         assert EX.sens_temp in uris
@@ -154,7 +166,9 @@ class TestSensorContext:
 
     def test_sensors_via_of_type_infer(self, g: Graph) -> None:
         """OfType with infer=True finds sensors through subclass hierarchy."""
-        sensors = SensorContext.project(g, select=OfType(SOSA.Sensor, infer=True))
+        sensors = SensorContext.project(
+            g, select=OfType(SOSA.Sensor, infer=True)
+        )
         assert len(sensors) == 2
         uris = {s.uri for s in sensors}
         assert EX.sens_temp in uris

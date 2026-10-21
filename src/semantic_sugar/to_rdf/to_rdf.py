@@ -1,40 +1,14 @@
 """Convert RDFModel instances back to an RDF graph (rdflib Graph)."""
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from rdflib import BNode, Graph, Literal, RDF, RDFS, URIRef
+from rdflib import BNode, Graph, Literal, RDF, URIRef
 from rdflib.term import Node
 
-from .plan import FieldPlan
-from .selectors import OfType
-
-if TYPE_CHECKING:
-    from .model import RDFModel
-
-
-def _to_rdf_term(value: Any, element: Any, fp: FieldPlan) -> Node:
-    """Convert a Python value to an RDF term (URIRef, BNode, or Literal)."""
-    if isinstance(value, (URIRef, BNode)):
-        return value
-    # Nested RDFModel: convert recursively and return the subject node
-    if fp.model is not None and isinstance(value, fp.model):
-        # The nested model's to_rdf adds triples to the graph and returns the subject
-        # We need the graph reference here, so this is handled in the caller
-        raise NotImplementedError("nested models handled by caller")
-    # Convert Python primitives to RDF Literals
-    if isinstance(value, bool):
-        return Literal(value)
-    if isinstance(value, (int, float)):
-        return Literal(value)
-    if isinstance(value, str):
-        return Literal(value)
-    if isinstance(value, URIRef):
-        return value
-    if isinstance(value, BNode):
-        return value
-    # Fallback
-    return Literal(str(value))
+from semantic_sugar.models.fieldplan import FieldPlan
+from semantic_sugar.models.selectors import OfType
 
 
 def _get_subject(instance: Any, plan: dict[str, FieldPlan]) -> Node | None:
@@ -59,7 +33,9 @@ def _get_class_types(model: type) -> list[URIRef]:
     return []
 
 
-def _add_literal(graph: Graph, subject: Node, predicate: URIRef, value: Any) -> None:
+def _add_literal(
+    graph: Graph, subject: Node, predicate: URIRef, value: Any
+) -> None:
     """Add a triple with the value converted to an appropriate RDF term."""
     # Check URIRef / BNode before str — URIRef is a subclass of str in rdflib
     if isinstance(value, (URIRef, BNode)):
@@ -79,7 +55,7 @@ def _add_literal(graph: Graph, subject: Node, predicate: URIRef, value: Any) -> 
 def to_rdf(instance: Any, graph: Graph | None = None) -> Graph:
     """Convert an RDFModel instance to an RDF graph.
 
-    Inspects the model's field plan to determine predicates and object values.
+    Inspects the model's field plan to determine predicates and objectRDFModel values.
     Fields whose ``Prop`` source is a ``Sparql`` expression or a callable are
     skipped, because they have no stable predicate IRI to reverse.
 
@@ -105,7 +81,9 @@ def to_rdf(instance: Any, graph: Graph | None = None) -> Graph:
     plan = model.rdf_plan()
     subject = _get_subject(instance, plan)
     if subject is None:
-        raise ValueError(f"{model.__name__} has no Id field; cannot determine subject node")
+        raise ValueError(
+            f"{model.__name__} has no Id field; cannot determine subject node"
+        )
 
     # Add rdf:type triples from the selector
     for cls_uri in _get_class_types(model):
@@ -122,7 +100,7 @@ def to_rdf(instance: Any, graph: Graph | None = None) -> Graph:
 
         source = fp.spec.source
         if not isinstance(source, (URIRef,)):
-            # Sparql, callable, Path — cannot reverse
+            # Sparql, callable, Path — cannot reverseRDFModel
             # Path could theoretically be reversed but is complex (e.g. inverse paths)
             continue
 
@@ -139,7 +117,9 @@ def to_rdf(instance: Any, graph: Graph | None = None) -> Graph:
                 if isinstance(value, (list, tuple, set, frozenset)):
                     for nested in value:
                         if getattr(type(nested), "__rdf_projectable__", False):
-                            nested_subject = _get_subject(nested, nested.rdf_plan())
+                            nested_subject = _get_subject(
+                                nested, nested.rdf_plan()
+                            )
                             graph.add((subject, predicate, nested_subject))
                             to_rdf(nested, graph)
                 continue

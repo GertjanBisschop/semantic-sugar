@@ -16,16 +16,6 @@ class Person(RDFModel, select=OfType(FOAF.Person)):
 people = Person.project(graph)  # list[Person]
 ```
 
-## Installation
-
-```bash
-pip install semantic-sugar
-# or
-uv pip install semantic-sugar
-```
-
-Dependencies: `rdflib>=7`, `pydantic>=2.7`, `typing_extensions`.
-
 ---
 
 ## How it works
@@ -411,10 +401,6 @@ When projecting a nested node, the library does not verify that the node actuall
 ### No SHACL/Shape validation
 
 The library does not integrate with `pyshacl` or provide graph-level shape validation. A `Shape(...)` selector is not yet implemented.
-
-### No reverse direction (`to_graph()`)
-
-Converting model instances back to RDF triples is not implemented. The library is read-only: RDF → Python only.
 
 ### No `ns=` class keyword
 

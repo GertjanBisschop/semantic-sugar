@@ -1,4 +1,5 @@
 """Exceptions and result containers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -7,19 +8,19 @@ from typing import Any, Generic, TypeVar
 T = TypeVar("T")
 
 
-class semanticError(Exception):
+class SemanticError(Exception):
     """Base class for all library errors."""
 
 
-class CardinalityError(semanticError):
+class CardinalityError(SemanticError):
     """A field expecting at most one value received several."""
 
 
-class CycleError(semanticError):
+class CycleError(SemanticError):
     """A node was re-entered while it was still being projected."""
 
 
-class ProjectionError(semanticError):
+class ProjectionError(SemanticError):
     """A node could not be projected into a model instance.
 
     Attributes:
@@ -31,9 +32,20 @@ class ProjectionError(semanticError):
                ``((parent_node, field_name), ...)``
     """
 
-    def __init__(self, node: Any, model: type, field: str | None, cause: BaseException,
-                 path: tuple = ()):
-        self.node, self.model, self.field, self.cause = node, model, field, cause
+    def __init__(
+        self,
+        node: Any,
+        model: type,
+        field: str | None,
+        cause: BaseException,
+        path: tuple = (),
+    ):
+        self.node, self.model, self.field, self.cause = (
+            node,
+            model,
+            field,
+            cause,
+        )
         self.path = tuple(path)
         super().__init__(self._message())
 

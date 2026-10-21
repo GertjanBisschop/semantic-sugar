@@ -1,4 +1,5 @@
 """RDF term -> Python value conversion (pluggable by datatype)."""
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -20,7 +21,7 @@ class Converters:
             if fn is not None:
                 return fn(term)
             if term.language:
-                return str(term)          # plain str, language tag dropped
+                return str(term)  # plain str, language tag dropped
             return term.toPython()
         return term
 
