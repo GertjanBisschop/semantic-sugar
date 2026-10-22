@@ -29,7 +29,24 @@ Raised when a node cannot be projected into a model instance.
 
 Instead of catching exceptions, use `try_project()` to collect errors:
 
-```python
+```python exec="on" source="above"
+from rdflib import Graph, FOAF
+from semantic_sugar import RDFModel, Prop, Id, OfType
+
+
+class Person(RDFModel, select=OfType(FOAF.Person)):
+    iri: Id
+    name: str = Prop(FOAF.name)
+
+
+graph = Graph().parse(
+    data="""
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+<http://example.org/alice> a foaf:Person ; foaf:name "Alice" .
+""",
+    format="turtle",
+)
+
 result = Person.try_project(graph)
 
 for person in result.objects:
@@ -56,79 +73,108 @@ for error in result.errors:
 
 A field expecting at most one value received several. This is raised when `on_many="error"` (the default).
 
-```python
-from semantic_sugar import CardinalityError
+```python exec="on" source="above"
+from rdflib import Graph, FOAF
+from semantic_sugar import RDFModel, Prop, Id, OfType, ProjectionError
+
+
+class Person(RDFModel, select=OfType(FOAF.Person)):
+    iri: Id
+    name: str = Prop(FOAF.name)  # expects exactly one
+
+
+graph = Graph().parse(
+    data="""
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+<http://example.org/alice> a foaf:Person ;
+    foaf:name "Alice" , "Alyssa" .
+""",
+    format="turtle",
+)
 
 try:
     people = Person.project(graph)
-except CardinalityError as e:
-    print(f"Multiple values for a scalar field: {e}")
+except ProjectionError as e:
+    print(f"Projection failed: {e.cause}")
 ```
 
 To avoid this, use `on_many="first"` or `on_many="last"`:
 
-```python
-name: str = Prop(FOAF.name, on_many="first")
+```python exec="on" source="above"
+from rdflib import Graph, FOAF
+from semantic_sugar import RDFModel, Prop, Id, OfType
+
+
+class Person(RDFModel, select=OfType(FOAF.Person)):
+    iri: Id
+    name: str = Prop(FOAF.name, on_many="first")
+
+
+graph = Graph().parse(
+    data="""
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+<http://example.org/alice> a foaf:Person ;
+    foaf:name "Alice" , "Alyssa" .
+""",
+    format="turtle",
+)
+
+people = Person.project(graph)
+print(f"Name (first): {people[0].name}")
 ```
 
 Or use a list type annotation:
 
-```python
-names: list[str] = Prop(FOAF.name)
+```python exec="on" source="above"
+from rdflib import Graph, FOAF
+from semantic_sugar import RDFModel, Prop, Id, OfType
+
+
+class Person(RDFModel, select=OfType(FOAF.Person)):
+    iri: Id
+    names: list[str] = Prop(FOAF.name)
+
+
+graph = Graph().parse(
+    data="""
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+<http://example.org/alice> a foaf:Person ;
+    foaf:name "Alice" , "Alyssa" .
+""",
+    format="turtle",
+)
+
+people = Person.project(graph)
+print(f"Names: {people[0].names}")
 ```
 
 ## CycleError
 
 A node was re-entered while it was still being projected. Cycles are **detected and raised**, not resolved.
 
-```python
-from semantic_sugar import CycleError
-
-try:
-    people = Person.project(graph)
-except CycleError as e:
-    print(f"Cyclic reference detected at node {e.node}")
-```
-
-### Breaking cycles
-
-Use one of these strategies:
-
-- **`deref=False`** — Keep the reference as a raw `URIRef`/`BNode` instead of projecting:
-
-  ```python
-  knows: URIRef | None = Prop(FOAF.knows, deref=False)
-  ```
-
-- **`max_depth=`** — Limit nesting depth:
-
-  ```python
-  people = Person.project(graph, max_depth=2)
-  ```
-
-## Pydantic validation errors
-
-Since `RDFModel` extends Pydantic's `BaseModel`, standard validation errors propagate as the `cause` of a `ProjectionError`:
-
-```python
-from pydantic import field_validator
+```python exec="on" source="above"
+from rdflib import Graph, FOAF
+from semantic_sugar import RDFModel, Prop, Id, OfType, ProjectionError
 
 
 class Person(RDFModel, select=OfType(FOAF.Person)):
     iri: Id
-    age: int = Prop(EX.age)
-
-    @field_validator("age")
-    @classmethod
-    def positive_age(cls, v):
-        if v < 0:
-            raise ValueError("age must be positive")
-        return v
+    name: str = Prop(FOAF.name)
+    knows: "Person" = Prop(FOAF.knows)
 
 
-# Validation failure is wrapped in ProjectionError
-result = Person.try_project(graph)
-for error in result.errors:
-    if isinstance(error.cause, pydantic.ValidationError):
-        print(f"Validation failed: {error.cause}")
+# Alice knows Bob, Bob knows Alice — a cycle
+graph = Graph().parse(
+    data="""
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+<http://example.org/alice> a foaf:Person ; foaf:name "Alice" ; foaf:knows <http://example.org/bob> .
+<http://example.org/bob> a foaf:Person ; foaf:name "Bob" ; foaf:knows <http://example.org/alice> .
+""",
+    format="turtle",
+)
+
+try:
+    people = Person.project(graph)
+except ProjectionError as e:
+    print(f"Cycle detected: {e.cause}")
 ```

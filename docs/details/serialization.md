@@ -6,7 +6,7 @@ Convert `RDFModel` instances back to RDF graphs using `to_rdf()` and `to_rdf_man
 
 Convert a single model instance to an RDF graph:
 
-```python
+```python exec="on" source="above"
 from rdflib import Namespace, URIRef
 from semantic_sugar.ontologies.dcat import DataService
 
@@ -50,30 +50,64 @@ The serializer inspects the model's field plan to determine predicates and value
 
 ### Adding to an existing graph
 
-```python
-from rdflib import Graph
+```python exec="on" source="above"
+from rdflib import Graph, Namespace, URIRef
+from semantic_sugar.ontologies.dcat import DataService
+
+EX = Namespace("https://example.com/")
+
+service = DataService(
+    uri=EX["my-service"],
+    title="My WFS Service",
+    endpoint_url=URIRef("https://ows.example.org/wfs"),
+)
 
 graph = Graph()
-# ... add other triples ...
 service.to_rdf(graph)  # adds triples to the existing graph
+print(f"Graph now has {len(graph)} triples")
 ```
 
 ## to_rdf_many
 
 Serialize multiple instances at once:
 
-```python
+```python exec="on" source="above"
+from rdflib import Namespace, URIRef
 from semantic_sugar import to_rdf_many
+from semantic_sugar.ontologies.dcat import DataService
 
-graph = to_rdf_many([service1, service2, service3])
+EX = Namespace("https://example.com/")
+
+service1 = DataService(
+    uri=EX["svc-1"],
+    title="Service 1",
+    endpoint_url=URIRef("https://example.org/svc1"),
+)
+service2 = DataService(
+    uri=EX["svc-2"],
+    title="Service 2",
+    endpoint_url=URIRef("https://example.org/svc2"),
+)
+
+graph = to_rdf_many([service1, service2])
+print(f"Serialized {len(graph)} triples")
 ```
 
 ## Nested models
 
 Nested models are serialized with their own subject-predicate-object structure:
 
-```python
-from semantic_sugar.ontologies.dcat import Dataset, Distribution
+```python exec="on" source="above"
+from rdflib import Namespace, URIRef
+from semantic_sugar.ontologies.dcat import Dataset, Distribution, DataService
+
+EX = Namespace("https://example.com/")
+
+service = DataService(
+    uri=EX["my-service"],
+    title="My WFS Service",
+    endpoint_url=URIRef("https://ows.example.org/wfs"),
+)
 
 dataset = Dataset(
     uri=EX["my-dataset"],
@@ -88,6 +122,7 @@ dataset = Dataset(
 )
 
 graph = dataset.to_rdf()
+print(graph.serialize(format="turtle"))
 ```
 
 The `dcat:distribution` predicate links the dataset to its distribution, and the distribution's `dcat:accessService` links to the service — all recursively.

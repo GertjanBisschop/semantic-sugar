@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from rdflib import BNode, Graph, Literal, RDF, URIRef
+from rdflib import BNode, Graph, Literal, OWL, RDF, RDFS, URIRef
 from rdflib.term import Node
 
 from semantic_sugar.models.fieldplan import FieldPlan
@@ -31,6 +31,24 @@ def _get_class_types(model: type) -> list[URIRef]:
     if isinstance(selector, OfType):
         return list(selector.classes)
     return []
+
+
+def _add_ontology_metadata(graph: Graph, subject: Node, model: type) -> None:
+    """Add rdfs:isDefinedBy and ontology metadata triples from class decorators."""
+    defined_by = getattr(model, "__rdf_defined_by__", None)
+    if defined_by is not None:
+        graph.add((subject, RDFS.isDefinedBy, URIRef(defined_by)))
+
+    ont_iri = getattr(model, "__rdf_ontology_iri__", None)
+    if ont_iri is not None:
+        # The defined-by resource is an ontology; assert its ontology:IRI
+        target = defined_by if defined_by is not None else subject
+        graph.add((target, OWL.versionIRI, URIRef(ont_iri)))
+
+    ont_version_iri = getattr(model, "__rdf_ontology_version_iri__", None)
+    if ont_version_iri is not None:
+        target = defined_by if defined_by is not None else subject
+        graph.add((target, OWL.versionIRI, URIRef(ont_version_iri)))
 
 
 def _add_literal(
@@ -88,6 +106,9 @@ def to_rdf(instance: Any, graph: Graph | None = None) -> Graph:
     # Add rdf:type triples from the selector
     for cls_uri in _get_class_types(model):
         graph.add((subject, RDF.type, cls_uri))
+
+    # Add ontology metadata (rdfs:isDefinedBy, ontology:IRI, ontology:versionIRI)
+    _add_ontology_metadata(graph, subject, model)
 
     # Process each field
     for name, fp in plan.items():

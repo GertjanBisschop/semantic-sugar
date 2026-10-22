@@ -2,16 +2,22 @@ from __future__ import annotations
 
 from rdflib import DCTERMS, Namespace, URIRef
 
-from semantic_sugar import Id, OfType, Prop, RDFModel
-
+from semantic_sugar import Id, OfType, Prop, rdfs_defined_by
+from semantic_sugar.ontologies.owl import OWLClass
 
 DCAT = Namespace("http://www.w3.org/ns/dcat#")
 
+# DCAT 3.0 version IRI
+_DCAT_VERSION = "https://www.w3.org/ns/dcat-2024-08-31"
 
-class DataService(RDFModel, select=OfType(DCAT.DataService)):
+
+@rdfs_defined_by(
+    ontology_iri=str(DCAT),
+    ontology_version_iri=_DCAT_VERSION,
+)
+class DataService(OWLClass, select=OfType(DCAT.DataService)):
     """A data service that provides access to datasets."""
 
-    uri: Id
     title: str | None = Prop(DCTERMS.title, on_many="first", default=None)
     description: str | None = Prop(
         DCTERMS.description, on_many="first", default=None
@@ -27,10 +33,13 @@ class DataService(RDFModel, select=OfType(DCAT.DataService)):
     )
 
 
-class Distribution(RDFModel, select=OfType(DCAT.Distribution)):
+@rdfs_defined_by(
+    ontology_iri=str(DCAT),
+    ontology_version_iri=_DCAT_VERSION,
+)
+class Distribution(OWLClass, select=OfType(DCAT.Distribution)):
     """A specific representation of a dataset."""
 
-    uri: Id
     title: str | None = Prop(DCTERMS.title, on_many="first", default=None)
     description: str | None = Prop(
         DCTERMS.description, on_many="first", default=None
@@ -46,10 +55,13 @@ class Distribution(RDFModel, select=OfType(DCAT.Distribution)):
     )
 
 
-class Dataset(RDFModel, select=OfType(DCAT.Dataset)):
+@rdfs_defined_by(
+    ontology_iri=str(DCAT),
+    ontology_version_iri=_DCAT_VERSION,
+)
+class Dataset(OWLClass, select=OfType(DCAT.Dataset)):
     """A collection of data published or curated by a single agent."""
 
-    uri: Id
     title: str | None = Prop(DCTERMS.title, on_many="first", default=None)
     description: str | None = Prop(
         DCTERMS.description, on_many="first", default=None
@@ -59,10 +71,13 @@ class Dataset(RDFModel, select=OfType(DCAT.Dataset)):
     )
 
 
-class Catalog(RDFModel, select=OfType(DCAT.Catalog)):
+@rdfs_defined_by(
+    ontology_iri=str(DCAT),
+    ontology_version_iri=_DCAT_VERSION,
+)
+class Catalog(OWLClass, select=OfType(DCAT.Catalog)):
     """A curated collection of metadata about resources."""
 
-    uri: Id
     title: str | None = Prop(DCTERMS.title, on_many="first", default=None)
     description: str | None = Prop(
         DCTERMS.description, on_many="first", default=None
