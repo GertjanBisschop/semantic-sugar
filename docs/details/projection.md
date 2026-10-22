@@ -93,8 +93,8 @@ people = Person.from_rows(
         "name": "n",
         "emails": "e",
         "employer.iri": "c",
-        "employer.name": "cn"
-    }
+        "employer.name": "cn",
+    },
 )
 ```
 
@@ -112,11 +112,9 @@ by_company = Projection(
         "name": Var("n"),
         "emails": Var("e"),
         "employer": Projection(
-            Company,
-            key=Var("c"),
-            fields={"iri": Var("c"), "name": Var("cn")}
-        )
-    }
+            Company, key=Var("c"), fields={"iri": Var("c"), "name": Var("cn")}
+        ),
+    },
 )
 people = by_company.run(graph)
 # or

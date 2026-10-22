@@ -13,10 +13,10 @@ Cardinality is declared once through standard Python type hints:
 | `list[T]` / `set[T]` | Zero or more values |
 
 ```python
-name: str                          # required — exactly one
-title: str | None                  # optional — zero or one
-emails: list[str]                  # multi-valued — zero or more
-tags: set[str]                     # multi-valued, no duplicates
+name: str  # required — exactly one
+title: str | None  # optional — zero or one
+emails: list[str]  # multi-valued — zero or more
+tags: set[str]  # multi-valued, no duplicates
 ```
 
 ## Prop
@@ -43,6 +43,7 @@ from semantic_sugar import Id, OfType, Prop, RDFModel, Sparql
 
 EX = Namespace("http://example.org/")
 
+
 class Person(RDFModel, select=OfType(FOAF.Person)):
     iri: Id
     name: str = Prop(FOAF.name)
@@ -50,7 +51,9 @@ class Person(RDFModel, select=OfType(FOAF.Person)):
     employer_name: str | None = Prop(EX.worksFor / EX.name)  # path
     colleagues: list[str] = Prop(EX.worksFor / ~EX.worksFor / FOAF.name)
     age: int = Prop(
-        Sparql("SELECT ?v WHERE { ?this ex:birthYear ?y . BIND(2026 - ?y AS ?v) }")
+        Sparql(
+            "SELECT ?v WHERE { ?this ex:birthYear ?y . BIND(2026 - ?y AS ?v) }"
+        )
     )
 ```
 
@@ -89,10 +92,13 @@ By default, when a field points to another node that has an `RDFModel` type, the
 ```python
 from rdflib import URIRef
 
+
 class Dataset(RDFModel, select=OfType(DCAT.Dataset)):
     iri: Id
     # Nested — projects the distribution node into a Distribution instance
-    distributions: tuple[Distribution, ...] = Prop(DCAT.distribution, deref=True)
+    distributions: tuple[Distribution, ...] = Prop(
+        DCAT.distribution, deref=True
+    )
     # Raw reference — keeps the URIRef
     access_service_uri: URIRef | None = Prop(DCAT.accessService, deref=False)
 ```
@@ -103,6 +109,7 @@ class Dataset(RDFModel, select=OfType(DCAT.Dataset)):
 
 ```python
 from semantic_sugar import Id
+
 
 class Person(RDFModel, select=OfType(FOAF.Person)):
     iri: Id  # receives the node's IRI
@@ -149,6 +156,7 @@ Since `RDFModel` extends Pydantic's `BaseModel`, all standard validators work:
 
 ```python
 from pydantic import field_validator
+
 
 class Person(RDFModel, select=OfType(FOAF.Person)):
     iri: Id

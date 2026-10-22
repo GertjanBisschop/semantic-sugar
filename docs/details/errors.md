@@ -36,7 +36,9 @@ for person in result.objects:
     print(person.name)
 
 for error in result.errors:
-    print(f"Failed to project {error.node} ({error.model.__name__}): {error.cause}")
+    print(
+        f"Failed to project {error.node} ({error.model.__name__}): {error.cause}"
+    )
     if error.field:
         print(f"  Field: {error.field}")
     if error.path:
@@ -111,6 +113,7 @@ Since `RDFModel` extends Pydantic's `BaseModel`, standard validation errors prop
 ```python
 from pydantic import field_validator
 
+
 class Person(RDFModel, select=OfType(FOAF.Person)):
     iri: Id
     age: int = Prop(EX.age)
@@ -121,6 +124,7 @@ class Person(RDFModel, select=OfType(FOAF.Person)):
         if v < 0:
             raise ValueError("age must be positive")
         return v
+
 
 # Validation failure is wrapped in ProjectionError
 result = Person.try_project(graph)

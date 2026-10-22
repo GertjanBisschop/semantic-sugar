@@ -9,6 +9,51 @@ from rdflib import RDF, RDFS, Graph, URIRef
 from rdflib.term import Node
 
 
+def _get_model_subclass_types(cls: URIRef) -> list[URIRef]:
+    """Walk the RDFModel Python class hierarchy to find child RDF types.
+
+    When a model declares ``select=OfType(ChildClass)`` and inherits from a parent
+    that declares ``select=OfType(ParentClass)``, and ``ParentClass == cls``, the
+    child's ``ChildClass`` is returned so that ``OfType(cls, infer=True)`` can
+    find instances typed as ``ChildClass`` without requiring an explicit
+    ``rdfs:subClassOf`` triple in the graph.
+
+    This bridges Python model inheritance to RDF type inference: if ``OWLClass``
+    extends ``RDFSClass`` in Python, then ``OfType(RDFS.Class, infer=True)`` will
+    also look for nodes typed as ``owl:Class``.
+    """
+    from semantic_sugar.models.rdfmodel import RDFModel
+
+    collected: list[URIRef] = []
+
+    # Find all models whose OfType selector includes cls
+    def _find_parent_models(model: type) -> list[type]:
+        parents: list[type] = []
+        for sub in model.__subclasses__():
+            sel = getattr(sub, "__rdf_select__", None)
+            if isinstance(sel, OfType) and cls in sel.classes:
+                parents.append(sub)
+            # Recurse to find deeper matches
+            parents.extend(_find_parent_models(sub))
+        return parents
+
+    # For each parent model, walk its subclasses to collect their OfType classes
+    def _walk_children(model: type) -> None:
+        for sub in model.__subclasses__():
+            sel = getattr(sub, "__rdf_select__", None)
+            if isinstance(sel, OfType):
+                for sub_cls in sel.classes:
+                    if sub_cls != cls and sub_cls not in collected:
+                        collected.append(sub_cls)
+            # Recurse into grandchildren
+            _walk_children(sub)
+
+    for parent in _find_parent_models(RDFModel):
+        _walk_children(parent)
+
+    return collected
+
+
 def _unique(nodes: Iterable[Node]) -> list[Node]:
     return list(dict.fromkeys(nodes))
 
@@ -35,11 +80,20 @@ class OfType(Selector):
     def select(self, graph: Graph) -> Iterator[Node]:
         seen: set[Node] = set()
         for cls in self.classes:
-            targets = (
-                list(graph.transitive_subjects(RDFS.subClassOf, cls))
-                if self.infer
-                else [cls]
-            )
+            if self.infer:
+                # Start with graph-based rdfs:subClassOf inference
+                targets: list[URIRef] = list(
+                    graph.transitive_subjects(RDFS.subClassOf, cls)
+                )
+                # Also include types discovered from Python model inheritance
+                # so that OWLClass extending RDFSClass in Python makes
+                # OfType(RDFS.Class, infer=True) find owl:Class instances
+                # without requiring the graph to contain owl:Class rdfs:subClassOf rdfs:Class
+                for model_type in _get_model_subclass_types(cls):
+                    if model_type not in targets:
+                        targets.append(model_type)
+            else:
+                targets = [cls]
             for t in targets:
                 for s in graph.subjects(RDF.type, t):
                     if s not in seen:

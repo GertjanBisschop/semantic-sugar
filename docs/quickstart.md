@@ -12,6 +12,7 @@ from rdflib import DCTERMS, Namespace, URIRef
 from semantic_sugar import Id, OfType, Prop, RDFModel
 from semantic_sugar.ontologies.dcat import DCAT
 
+
 class DataService(RDFModel, select=OfType(DCAT.DataService)):
     """A data service that provides access to datasets."""
 
