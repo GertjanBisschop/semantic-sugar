@@ -18,10 +18,12 @@ from semantic_sugar import RDFModel, Prop, Id, OfType
 
 EX = Namespace("http://example.org/")
 
+
 class Person(RDFModel, select=OfType(FOAF.Person)):
     iri: Id
     name: str = Prop(FOAF.name)
     emails: list[str] = Prop(FOAF.mbox)
+
 
 people = Person.project(graph)  # list[Person]
 ```
@@ -44,5 +46,5 @@ Every projection passes through four independent stages:
 - **[Projection](details/projection.md)** — Graph-driven and query-driven projection modes.
 - **[Selectors](details/selectors.md)** — Control which RDF nodes are projected.
 - **[Serialization](details/serialization.md)** — Convert model instances back to RDF graphs.
-- **[Built-in ontologies](ontologies.md)** — Pre-defined models for DCAT.
+- **[Built-in ontologies](ontologies.md)** — Pre-defined models for existing ontologies.
 - **[Errors](details/errors.md)** — Error handling and validation.

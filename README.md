@@ -8,7 +8,7 @@ from semantic_sugar import RDFModel, Prop, Id, Lang, OfType
 
 EX = Namespace("http://example.org/")
 
-graph = """
+data = """
 @prefix ex:   <http://example.org/> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 
@@ -25,14 +25,31 @@ ex:bob
     foaf:mbox <mailto:bob@example.org> .
 """
 
+
 class Person(RDFModel, select=OfType(FOAF.Person)):
     iri: Id
     name: str = Prop(FOAF.name, lang=Lang.prefer("en"))
     emails: list[str] = Prop(FOAF.mbox)
 
+
 graph = Graph()
 graph.parse(data=data, format="turtle")
 people = Person.project(graph)  # list[Person]
+```
+```
+print(people)
+[
+    Person(
+        iri=rdflib.term.URIRef('http://example.org/alice'), 
+        name='Alice Smith', 
+        emails=['mailto:alice.smith@example.org', 'mailto:alice@example.org']
+    ), 
+    Person(
+        iri=rdflib.term.URIRef('http://example.org/bob'), 
+        name='Bob Jones', 
+        emails=['mailto:bob@example.org']
+    )
+]
 ```
 
 See [documentation](https://vlizbe.github.io/semantic-sugar/) for details.
