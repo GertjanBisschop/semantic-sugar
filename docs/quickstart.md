@@ -80,8 +80,9 @@ for catalog in catalogs:
 
 ## Serializing back to RDF
 
-```python
+```python exec="on" source="above"
 from rdflib import Namespace, URIRef
+from semantic_sugar.ontologies.dcat import DataService
 
 EX = Namespace("https://example.com/")
 

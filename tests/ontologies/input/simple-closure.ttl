@@ -1,0 +1,68 @@
+@prefix ex: <https://example.org/data/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix qk: <http://qudt.org/vocab/quantitykind/> .
+@prefix qudt: <http://qudt.org/schema/qudt/>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sensor: <https://example.org/sensor/> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix unit: <http://qudt.org/vocab/unit/>.
+@prefix skos: <http://www.w3.org/2004/02/skos/core#>.
+
+ex:Temperature a sosa:Property ;
+    rdfs:label "A temperature property" ;
+	skos:broader qk:Temperature ;
+    qudt:hasUnit unit:K
+.
+
+ex:Pressure a sosa:Property ;
+    rdfs:label "A pressure property" ;
+	skos:broader qk:Pressure ;
+    qudt:hasUnit unit:PA
+.
+
+unit:K a qudt:Unit ;
+    qudt:symbol "K" ;
+    qudt:ucumCode "K"^^qudt:UCUMcs
+.
+
+unit:PA a qudt:Unit ;
+    qudt:symbol "Pa" ;
+    qudt:ucumCode "Pa"^^qudt:UCUMcs
+.
+
+sensor:TemperatureSensor
+  a owl:Class ;
+  rdfs:label "A generic temperature sensor" ;
+  rdfs:subClassOf sosa:Sensor ;
+  rdfs:subClassOf [
+      a owl:Restriction ;
+      owl:hasValue ex:Temperature ;
+      owl:onProperty sosa:observes ;
+    ] ;
+.
+
+sensor:PressureSensor
+  a owl:Class ;
+  rdfs:label "A generic pressure sensor" ;
+  rdfs:subClassOf sosa:Sensor ;
+  rdfs:subClassOf [
+      a owl:Restriction ;
+      owl:hasValue ex:Pressure ;
+      owl:onProperty sosa:observes ;
+    ] ;
+.
+
+ex:sens_temp a sensor:TemperatureSensor ;
+    rdfs:label "Specific temperature sensor"
+.
+
+ex:sens_press a sensor:PressureSensor ;
+    rdfs:label "Specific pressure sensor"
+.
+
+ex:WeatherStation a sosa:System ;
+    sosa:hasSubSystem ex:sens_temp ;
+    sosa:hasSubSystem ex:sens_press ;
+    rdfs:label "The weather station"
+ .

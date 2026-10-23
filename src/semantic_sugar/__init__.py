@@ -8,7 +8,7 @@ from semantic_sugar.models.errors import (
     ProjectionResult,
     SemanticError,
 )
-from semantic_sugar.models.rdfmodel import RDFModel
+from semantic_sugar.models.rdfmodel import RDFModel, rdfs_defined_by
 from semantic_sugar.models.selectors import (
     AllOf,
     AnyOf,
@@ -18,6 +18,7 @@ from semantic_sugar.models.selectors import (
     Selector,
     Sparql,
 )
+
 from semantic_sugar.from_rdf.converters import Converters, default_converters
 from semantic_sugar.from_rdf.rows import Projection, Var
 from semantic_sugar.to_rdf import to_rdf, to_rdf_many
@@ -34,6 +35,7 @@ __all__ = [
     "AllOf",
     "AnyOf",
     "Selector",
+    "rdfs_defined_by",
     "Projection",
     "Var",
     "Converters",

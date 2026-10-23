@@ -12,11 +12,9 @@ pip install semantic-sugar
 
 ## Quick example
 
-```python
-from rdflib import FOAF, Namespace
+```python exec="on" source="above"
+from rdflib import Graph, FOAF
 from semantic_sugar import RDFModel, Prop, Id, OfType
-
-EX = Namespace("http://example.org/")
 
 
 class Person(RDFModel, select=OfType(FOAF.Person)):
@@ -25,7 +23,19 @@ class Person(RDFModel, select=OfType(FOAF.Person)):
     emails: list[str] = Prop(FOAF.mbox)
 
 
-people = Person.project(graph)  # list[Person]
+graph = Graph().parse(
+    data="""
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+<http://example.org/alice> a foaf:Person ;
+    foaf:name "Alice" ;
+    foaf:mbox "alice@example.org" .
+""",
+    format="turtle",
+)
+
+people = Person.project(graph)
+for person in people:
+    print(f"{person.name}: {person.emails}")
 ```
 
 ## How it works
